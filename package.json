@@ -1,0 +1,44 @@
+{
+  "name": "subagent-watch",
+  "version": "0.1.0",
+  "description": "Live terminal dashboard for Claude Code subagent activity. See thinking, tool calls, and replies of every Task subagent in real time.",
+  "type": "module",
+  "bin": {
+    "subagent-watch": "bin/subagent-watch.mjs",
+    "subwatch": "bin/subagent-watch.mjs"
+  },
+  "files": [
+    "bin/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node bin/subagent-watch.mjs"
+  },
+  "keywords": [
+    "claude-code",
+    "ai",
+    "observability",
+    "cli",
+    "terminal",
+    "tui",
+    "subagents",
+    "agent-monitoring",
+    "anthropic",
+    "developer-tools"
+  ],
+  "author": "Mike Sewell",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MikeSewell/subagent-watch.git"
+  },
+  "homepage": "https://github.com/MikeSewell/subagent-watch#readme",
+  "bugs": {
+    "url": "https://github.com/MikeSewell/subagent-watch/issues"
+  }
+}
