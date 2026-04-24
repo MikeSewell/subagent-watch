@@ -46,23 +46,24 @@ Each subagent gets a unique border color (cyan, magenta, yellow, green, blue) so
 
 ## Install
 
-### From npm (coming soon)
-
-```sh
-npm install -g subagent-watch
-```
-
-### From source (today)
+> npm publishing is coming. Until then, install from source:
 
 ```sh
 git clone https://github.com/MikeSewell/subagent-watch.git
 cd subagent-watch
 chmod +x bin/subagent-watch.mjs
-ln -s "$(pwd)/bin/subagent-watch.mjs" ~/.local/bin/subwatch
-# (or any directory on your $PATH)
+sudo ln -s "$(pwd)/bin/subagent-watch.mjs" /usr/local/bin/subwatch
 ```
 
+(`/usr/local/bin` is on `PATH` for every shell on macOS, so the command works in any terminal including cmux panes.)
+
 Requires Node 18+. Zero npm dependencies.
+
+### Once npm publishing is live
+
+```sh
+npm install -g subagent-watch
+```
 
 ## Run
 
@@ -135,7 +136,7 @@ For visibility into the **main agent's** activity, just look at its cmux/tmux pa
 
 ## Contributing
 
-PRs welcome. Open an issue first for anything substantial. Keep the tool single-file and dependency-free unless there's a strong reason to add either.
+Issues and PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The short version: open an issue first for anything beyond a typo or bug fix, keep the tool single-file and dependency-free, no em dashes.
 
 ## License
 
