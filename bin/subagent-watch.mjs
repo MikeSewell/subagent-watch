@@ -7,7 +7,7 @@ import { readdir, stat, open, readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, basename, dirname } from "node:path";
 
-const PROJECTS_DIR = join(homedir(), ".claude", "projects");
+const PROJECTS_DIR = process.env.SUBAGENT_WATCH_PROJECTS_DIR || join(homedir(), ".claude", "projects");
 const ACTIVE_WINDOW_MS = Number(process.env.SUBAGENT_WATCH_WINDOW_MS ?? 30 * 60 * 1000);
 const COMPLETED_LINGER_MS = Number(process.env.SUBAGENT_WATCH_LINGER_MS ?? 30 * 1000);
 const COMPLETION_IDLE_MS = Number(process.env.SUBAGENT_WATCH_IDLE_MS ?? 5 * 1000);

@@ -2,6 +2,8 @@
 
 > Live terminal dashboard for Claude Code subagent activity. See thinking, tool calls, and replies of every Task subagent in real time.
 
+![subagent-watch demo](assets/demo.gif)
+
 ## The problem
 
 When Claude Code's main agent uses the `Task` tool to spawn a subagent, **you can't see what the subagent is doing**. The main pane just shows "Task running..." and eventually the final summary. The subagent's actual thinking, tool calls, and intermediate work never appear in your terminal.
