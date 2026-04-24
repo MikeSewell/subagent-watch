@@ -19,28 +19,30 @@ But no UI surfaces it. So you sit there guessing what the subagents are up to.
 `subagent-watch` tails those files and renders one panel per active subagent in a single terminal window. Pin it to a tmux pane and you can see every subagent's live work at a glance.
 
 ```
-subagent-watch  1 subagent                                    12:26:31 PM
-─────────────────────────────────────────────────────────────────────────
-╭─ NUBES ↳ a4f8db5 ──────────────── started 41s ago · running ──────────╮
-│ ↑ 1 earlier event                                                       │
-│ 🔧 TOOL  Bash 40s ago                                                   │
-│   ls /Users/mastermac/Desktop/NUBES/apps/web/convex/*.ts                │
-│                                                                         │
-│ 💬 SAY   35s ago                                                        │
-│   Step 3: Found 36 .ts files. Let me pick `extractionRetryCron.ts`      │
-│   since the project context referenced it as an interesting cron file,  │
-│   and read it.                                                          │
-│                                                                         │
-│ 🔧 TOOL  Read 34s ago                                                   │
-│   /Users/mastermac/Desktop/NUBES/apps/web/convex/extractionRetryCron.ts │
-│                                                                         │
-│ 💬 SAY   29s ago                                                        │
-│   Step 4: Thinking about what it does. This is a Convex internal        │
-│   action (`retryStuckExtractions`) triggered by a cron every 2 hours... │
-╰─────────────────────────────────────────────────────────────────────────╯
+subagent-watch  3 subagents                                       5:28:36 PM
+────────────────────────────────────────────────────────────────────────────
+╭─ NUBES ↳ a8069d3 · "Find callers of getDailyBrief" ─── 2m 14s · ● running ─╮
+│ 🤔 THINK  1m ago                                                            │
+│   The user wants me to refactor getDailyBrief to support per-client         │
+│   filtering. Let me find all callers first.                                 │
+│                                                                             │
+│ 🔧 TOOL  Grep  45s ago                                                      │
+│   pattern: "getDailyBrief"  in: apps/web/                                   │
+│                                                                             │
+│ 💬 SAY   3s ago                                                             │
+│   Found 3 callers. Two pass clientFilter, one doesn't. I'll add a default.  │
+╰─────────────────────────────────────────────────────────────────────────────╯
+╭─ Scheduler ↳ b1234fg · "Align intake schema" ────── 1m 8s · ✓ 5s ago ──────╮
+│ ...                                                                         │
+╰─────────────────────────────────────────────────────────────────────────────╯
+╭─ grant-wizard ↳ c9201f · "Verify scoring math" ──── 45s · ● running ───────╮
+│ ...                                                                         │
+╰─────────────────────────────────────────────────────────────────────────────╯
 
 [q]uit · auto-refresh 1s · completed agents linger 30s
 ```
+
+Each subagent gets a unique border color (cyan, magenta, yellow, green, blue) so multi-agent views stay scannable. The header includes the task description from the parent's `Task(description=...)` call so you know at a glance what each subagent is working on.
 
 ## Install
 

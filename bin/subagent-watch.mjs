@@ -3,7 +3,7 @@
 // One terminal window. One panel per active subagent. Full thinking text,
 // tool calls with their actual arguments, subagent speech. No truncation.
 
-import { readdir, stat, open } from "node:fs/promises";
+import { readdir, stat, open, readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, basename, dirname } from "node:path";
 
@@ -19,13 +19,26 @@ const ANSI = {
   reset: "\x1b[0m", dim: "\x1b[2m", bold: "\x1b[1m",
   red: "\x1b[31m", green: "\x1b[32m", yellow: "\x1b[33m",
   blue: "\x1b[34m", magenta: "\x1b[35m", cyan: "\x1b[36m",
-  gray: "\x1b[90m", brightGreen: "\x1b[92m",
+  gray: "\x1b[90m",
+  brightGreen: "\x1b[92m", brightYellow: "\x1b[93m",
+  brightBlue: "\x1b[94m", brightMagenta: "\x1b[95m", brightCyan: "\x1b[96m",
   clearScreen: "\x1b[2J", cursorHome: "\x1b[H", clearToEnd: "\x1b[J",
   hideCursor: "\x1b[?25l", showCursor: "\x1b[?25h",
 };
 const C = (col, s) => col + s + ANSI.reset;
 const stripAnsi = s => s.replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, "");
 const visualLen = s => stripAnsi(s).length;
+
+// Stable per-agent color assignment so multi-agent views are scannable
+const AGENT_COLORS = [
+  ANSI.cyan, ANSI.magenta, ANSI.yellow, ANSI.green,
+  ANSI.brightCyan, ANSI.brightMagenta, ANSI.brightYellow, ANSI.brightBlue,
+];
+function colorForId(id) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return AGENT_COLORS[h % AGENT_COLORS.length];
+}
 
 function ago(ms) {
   const s = Math.floor(ms / 1000);
@@ -115,6 +128,8 @@ class SubagentState {
     this.filePath = filePath;
     this.subagentId = basename(filePath, ".jsonl").replace(/^agent-/, "").slice(0, 7);
     this.repo = "?";
+    this.agentType = null;
+    this.description = null;
     this.events = [];
     this.startedAt = null;
     this.lastEventAt = null;
@@ -122,6 +137,17 @@ class SubagentState {
     this.completedAt = null;
   }
   get status() { return this.completedAt ? "completed" : "running"; }
+}
+
+async function readMeta(subagentFilePath) {
+  const metaPath = subagentFilePath.replace(/\.jsonl$/, ".meta.json");
+  try {
+    const text = await readFile(metaPath, "utf8");
+    const meta = JSON.parse(text);
+    return { agentType: meta.agentType || null, description: meta.description || null };
+  } catch {
+    return { agentType: null, description: null };
+  }
 }
 
 const states = new Map();
@@ -221,6 +247,9 @@ async function syncStates() {
       const parentSessionFile = sessionDir + ".jsonl";
       const state = new SubagentState(p);
       state.repo = await resolveRepo(parentSessionFile);
+      const meta = await readMeta(p);
+      state.agentType = meta.agentType;
+      state.description = meta.description;
       states.set(p, state);
     }
   }
@@ -255,23 +284,46 @@ function renderEvent(ev, innerW) {
   return block;
 }
 
+function truncateMid(s, max) {
+  if (!s) return "";
+  s = String(s).replace(/\s+/g, " ").trim();
+  return s.length > max ? s.slice(0, max - 1) + "…" : s;
+}
+
 function panelHeader(state, width) {
+  const color = colorForId(state.subagentId);
   const id = `${state.repo} ↳ ${state.subagentId}`;
-  const elapsed = state.startedAt ? `started ${ago(Date.now() - state.startedAt)} ago` : "starting…";
+  const elapsed = state.startedAt ? `${ago(Date.now() - state.startedAt)}` : "starting…";
   const status = state.completedAt
-    ? `${C(ANSI.brightGreen, "✓ completed")} ${ago(Date.now() - state.completedAt)} ago`
-    : C(ANSI.brightGreen, "running");
-  const left = `╭─ ${C(ANSI.bold + ANSI.yellow, id)} `;
-  const right = ` ${C(ANSI.dim, elapsed)} · ${status} ─╮`;
-  const fill = "─".repeat(Math.max(2, width - visualLen(left) - visualLen(right)));
+    ? `${C(ANSI.brightGreen, "✓")} ${ago(Date.now() - state.completedAt)} ago`
+    : C(ANSI.brightGreen, "● running");
+
+  // Build title: "<id> · "<description>""  (description optional)
+  // Reserve room for elapsed + status + borders + spacing
+  const right = ` ${C(ANSI.dim, elapsed)} · ${status} ${C(color, "─╮")}`;
+  const leftPrefix = `${C(color, "╭─")} ${C(ANSI.bold + color, id)}`;
+  const fixedLen = visualLen(leftPrefix) + visualLen(right) + 4; // 4 for spacing/fill min
+  let descPart = "";
+  if (state.description) {
+    const room = Math.max(0, width - fixedLen);
+    if (room > 8) {
+      const desc = truncateMid(state.description, room);
+      descPart = ` ${C(ANSI.dim, "·")} ${C(color, '"' + desc + '"')}`;
+    }
+  }
+  const left = `${leftPrefix}${descPart} `;
+  const fillW = Math.max(2, width - visualLen(left) - visualLen(right));
+  const fill = C(color, "─".repeat(fillW));
   return left + fill + right;
 }
 
-function panelFooter(width) {
-  return "╰" + "─".repeat(width - 2) + "╯";
+function panelFooter(state, width) {
+  const color = colorForId(state.subagentId);
+  return C(color, "╰" + "─".repeat(width - 2) + "╯");
 }
 
 function renderPanel(state, width, totalLines) {
+  const color = colorForId(state.subagentId);
   const lines = [panelHeader(state, width)];
   const innerW = width - 4;
   const bodyLines = Math.max(1, totalLines - 2);
@@ -285,7 +337,6 @@ function renderPanel(state, width, totalLines) {
     const room = bodyLines - flat.length - sep;
     if (room <= 0) break;
     if (block.length > room) {
-      // Truncate the latest event to fit if it's too tall (rather than skip it entirely)
       if (included === 0) {
         block = block.slice(0, room - 1).concat([C(ANSI.dim, "  …")]);
       } else {
@@ -303,11 +354,12 @@ function renderPanel(state, width, totalLines) {
   while (flat.length < bodyLines) flat.push("");
   if (flat.length > bodyLines) flat.length = bodyLines;
 
+  const bar = C(color, "│");
   for (const ln of flat) {
     const padding = " ".repeat(Math.max(0, innerW - visualLen(ln)));
-    lines.push(`│ ${ln}${padding} │`);
+    lines.push(`${bar} ${ln}${padding} ${bar}`);
   }
-  lines.push(panelFooter(width));
+  lines.push(panelFooter(state, width));
   return lines;
 }
 
@@ -333,14 +385,18 @@ function renderFrame() {
   const available = Math.max(3, rows - reservedTop - reservedBot);
 
   if (list.length === 0) {
-    const msg = "no active subagents — start a Task in any cmux session and it will appear here";
-    const lines = wrap(msg, Math.min(80, cols - 4));
+    const lines = [
+      C(ANSI.dim, "no active subagents"),
+      "",
+      C(ANSI.dim, "waiting for Task spawns from any Claude Code session"),
+      C(ANSI.dim, "(panels appear here the moment a subagent starts writing events)"),
+    ];
     const top = Math.max(0, Math.floor(available / 2) - Math.ceil(lines.length / 2));
     for (let i = 0; i < top; i++) out += "\n";
     let used = top;
     for (const ln of lines) {
-      const pad = Math.max(0, Math.floor((cols - ln.length) / 2));
-      out += " ".repeat(pad) + C(ANSI.dim, ln) + "\n";
+      const pad = Math.max(0, Math.floor((cols - visualLen(ln)) / 2));
+      out += " ".repeat(pad) + ln + "\n";
       used++;
     }
     while (used < available) { out += "\n"; used++; }

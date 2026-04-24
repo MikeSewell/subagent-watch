@@ -1,6 +1,6 @@
 {
   "name": "subagent-watch",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Live terminal dashboard for Claude Code subagent activity. See thinking, tool calls, and replies of every Task subagent in real time.",
   "type": "module",
   "bin": {
